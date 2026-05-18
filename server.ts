@@ -1,16 +1,11 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import { MongoClient, ServerApiVersion, ObjectId } from 'mongodb';
 import path from "path";
-import { fileURLToPath } from "url";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 
 dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key";
 
@@ -37,27 +32,25 @@ const authenticateToken = (req: any, res: any, next: any) => {
   });
 };
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
+const PORT = 3000;
 
-  app.use(express.json());
+app.use(express.json());
 
-  // Connect to MongoDB
-  try {
-    await client.connect();
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } catch (err) {
-    console.error("MongoDB connection error:", err);
-  }
+// Initialize MongoDB Connection Lazily
+client.connect().then(() => {
+  client.db("admin").command({ ping: 1 });
+  console.log("Pinged your deployment. You successfully connected to MongoDB!");
+}).catch((err) => {
+  console.error("MongoDB connection error:", err);
+});
 
-  // API routes FIRST
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
-  });
+// API routes FIRST
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok" });
+});
 
-  // ========== AUTHENTICATION ROUTES ==========
+// ========== AUTHENTICATION ROUTES ==========
   app.post("/api/auth/register", async (req, res) => {
     console.log("Register endpoint hit:", req.body);
     try {
@@ -649,49 +642,51 @@ async function startServer() {
     res.status(404).json({ error: "API route not found" });
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
+// Vite middleware for development
+if (process.env.NODE_ENV !== "production") {
+  (async () => {
+    try {
+      const viteModule = await import("vite");
+      const createViteServer = viteModule.createServer;
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch (e) {
+      console.error("Vite failed to load:", e);
+    }
+  })();
+} else {
+  const distPath = path.join(process.cwd(), 'dist');
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
-  // Global Error Handler to guarantee JSON responses
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error('Unhandled Server Error:', err);
-    if (!res.headersSent) {
-      if (req.originalUrl.startsWith('/api/')) {
-        res.status(500).json({ error: "Internal Server Error", details: err.message });
-      } else {
-        next(err);
-      }
+// Global Error Handler to guarantee JSON responses
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Unhandled Server Error:', err);
+  if (!res.headersSent) {
+    if (req.originalUrl.startsWith('/api/')) {
+      res.status(500).json({ error: "Internal Server Error", details: err.message });
     } else {
       next(err);
     }
-  });
-
-  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
-  } else if (!process.env.VERCEL) {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
+  } else {
+    next(err);
   }
-  
-  return app;
+});
+
+if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+} else if (!process.env.VERCEL) {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
 }
 
-const appPromise = startServer();
-export default (req: any, res: any) => {
-  appPromise.then(app => app(req, res));
-};
+export default app;
