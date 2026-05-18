@@ -7,9 +7,9 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key";
+const JWT_SECRET = "your-super-secret-jwt-key";
 
-const uri = process.env.MONGO_URI || "mongodb://admin:16Paradox2006@ac-chlkpz1-shard-00-00.a54grbt.mongodb.net:27017,ac-chlkpz1-shard-00-01.a54grbt.mongodb.net:27017,ac-chlkpz1-shard-00-02.a54grbt.mongodb.net:27017/perfume?ssl=true&replicaSet=atlas-o5kywo-shard-0&authSource=admin&retryWrites=true&w=majority&appName=Cluster0";
+const uri = "mongodb://admin:16Paradox2006@ac-chlkpz1-shard-00-00.a54grbt.mongodb.net:27017,ac-chlkpz1-shard-00-01.a54grbt.mongodb.net:27017,ac-chlkpz1-shard-00-02.a54grbt.mongodb.net:27017/perfume?ssl=true&replicaSet=atlas-o5kywo-shard-0&authSource=admin&retryWrites=true&w=majority&appName=Cluster0";
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -374,7 +374,7 @@ app.get("/api/health", (req, res) => {
       await orders.insertOne(newOrder);
 
       // Send order details to Google Sheets if configured
-      const googleScriptUrl = process.env.GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbxGdbjTPfPlBfJRLZtnGdoROPEkQ-1i6C_dT0eTSlxOYAFafzSWfy_mRgfUjDcFlI5G/exec";
+      const googleScriptUrl = "https://script.google.com/macros/s/AKfycbxGdbjTPfPlBfJRLZtnGdoROPEkQ-1i6C_dT0eTSlxOYAFafzSWfy_mRgfUjDcFlI5G/exec";
       if (googleScriptUrl) {
         try {
           const userEmail = req.user.email || shippingInfo?.email || 'Customer';
@@ -605,7 +605,7 @@ app.get("/api/health", (req, res) => {
       const { email, phone } = req.body;
       
       // If deployed with Google Script URL set, send data to Google Sheets
-      const googleScriptUrl = process.env.GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbxGdbjTPfPlBfJRLZtnGdoROPEkQ-1i6C_dT0eTSlxOYAFafzSWfy_mRgfUjDcFlI5G/exec";
+      const googleScriptUrl = "https://script.google.com/macros/s/AKfycbxGdbjTPfPlBfJRLZtnGdoROPEkQ-1i6C_dT0eTSlxOYAFafzSWfy_mRgfUjDcFlI5G/exec";
       
       if (googleScriptUrl) {
         const response = await fetch(googleScriptUrl, {
